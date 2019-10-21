@@ -4,6 +4,6 @@ module.exports = {
   iterations: 2000,
   operations: 10,
   shortening: {
-    maxShorteningIterations: 1e6
+    iterations: 1e6
   }
 }

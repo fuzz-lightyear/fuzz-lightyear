@@ -4,7 +4,6 @@ const crypto = require('crypto')
 const { EventEmitter } = require('events')
 
 const test = require('tape')
-const tmp = require('tmp')
 const deepmerge = require('deepmerge')
 const FuzzBuzz = require('fuzzbuzz')
 
@@ -23,6 +22,8 @@ class TraceExecutor {
   }
 
   async _exec (inputs, op) {
+    // TODO: hack to prevent saturating the event loop (so ctrl+c exits)
+    await new Promise(resolve => setImmediate(resolve))
     if (!inputs) inputs = op.inputs()
     await op.operation(...inputs)
     return inputs
@@ -36,8 +37,8 @@ class TraceExecutor {
   }
 
   async replay () {
-    for (const { inputs, op } of this._trace) {
-      await this._exec(inputs, op)
+    for (const { inputs, name } of this._trace) {
+      await this._exec(inputs, this.operations[name])
     }
   }
 }
@@ -68,7 +69,7 @@ class GenericFuzzer extends EventEmitter {
 
   _wrapOperation (name) {
     return async () => {
-      this.executor.pushAndExecute(name)
+      await this.executor.pushAndExecute(name)
       this.emit('progress')
     }
   }
@@ -103,11 +104,11 @@ class GenericFuzzer extends EventEmitter {
     }
   }
 
-  run () {
+  async run () {
     try {
-      return this.fuzzer.run(this.opts.numOperations)
+      await this.fuzzer.run(this.opts.numOperations)
     } catch (err) {
-      throw this.shorten(err)
+      throw await this.shorten(err)
     }
   }
 
@@ -130,7 +131,7 @@ class GenericFuzzer extends EventEmitter {
     const testName = err[consts.TestName]
     const testArgs = err[consts.TestArgs]
 
-    var shortestTrace = [ ...this.executor.trace() ]
+    var shortestTrace = [ ...this.executor.trace ]
     var numShortenings = 0
     var numIterations = 0
     var error = err
@@ -145,7 +146,7 @@ class GenericFuzzer extends EventEmitter {
       nextTrace.splice(i, 1)
 
       const { actual, reference, state, operations, validation } = await this._setup()
-      const executor = new TraceExecutor(nextTrace)
+      const executor = new TraceExecutor(nextTrace, operations)
       const test = validation.tests[testName]
 
       await executor.replay()
@@ -173,9 +174,13 @@ class GenericFuzzer extends EventEmitter {
     const self = this
 
     for (const name of Object.keys(this.validation.validators)) {
+      const opts = this.opts.validation[name]
+      if (!opts.enabled) continue
+
       const validator = this.validation.validators[name]
       const test = this.validation.tests[validator.test]
       var testArgs = null
+
       const wrappedTest = function () {
         testArgs = arguments
         self.debug(`in validator ${name}, testing ${validator.test}(${JSON.stringify([...testArgs])})`)
@@ -213,10 +218,8 @@ function create (userFunctions, userConfig) {
         seed: startingSeed + (i ? '' + i : '')
       })
       await fuzzer.setup()
-      // TODO: Hack to enable exiting on ctrl+c
-      await new Promise(resolve => setImmediate(resolve))
-      await fuzzer.run()
       events.emit('progress')
+      await fuzzer.run()
     }
   }
 }

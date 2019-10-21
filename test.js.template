@@ -27,6 +27,9 @@ if (require.main) {
   module.exports = {
     runTests,
     getObjects,
-    config
+    config,
   }
 }
+
+// Warning: Do not modify the signature below! It is used to deduplicate fuzz tests.
+// @FUZZ_SIGNATURE {{ signature }}

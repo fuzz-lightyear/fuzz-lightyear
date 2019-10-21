@@ -73,17 +73,20 @@ exports.handler = async function (argv) {
   try {
     await run()
     if (bar) bar.stop()
+    console.log()
+    console.log('Fuzzing Succeeded.')
+    console.log()
   } catch (err) {
     if (bar) bar.stop()
     if (!err[consts.FuzzError]) {
       console.error('Fuzzing produced unexpected error:', err)
     } else {
-      const testCase = await generateTestCase(err, argv)
-      console.log('Failing Test:\n')
+      const { testCase, signature } = await generateTestCase(err, argv)
+      console.log('\nFailing Test:\n')
       console.log(testCase)
       console.log()
       if (argv.print !== false) {
-        const testPath = await writeTest(testCase, failingTestRoot)
+        const testPath = await writeTest(testCase, signature, failingTestRoot)
         console.log()
       }
     }
@@ -100,14 +103,18 @@ async function generateTestCase (err, argv) {
 
   const trace = err[consts.Trace]
   const operations = trace.map(t => `await op.${t.name}(${JSON.stringify(t.inputs).slice(1).slice(0, -1)})`).join('\n  ')
+  const testName = err[consts.TestName]
+  const testArgs = JSON.stringify([...err[consts.TestArgs]]).slice(1).slice(0, -1)
+  const signature = shasum(JSON.stringify({ operations, testName, testArgs }))
 
   const replacements = new Map([
     ['operations', operations],
     ['modulePath', argv.module],
     ['config', JSON.stringify(err[consts.Config], null, 1)],
     ['description', err[consts.Description]],
-    ['testName', err[consts.TestName]],
-    ['testArgs', JSON.stringify([...err[consts.TestArgs]]).slice(1).slice(0, -1)]
+    ['testName', testName],
+    ['testArgs', testArgs],
+    ['signature', signature]
   ])
 
   var testCase = template
@@ -115,12 +122,18 @@ async function generateTestCase (err, argv) {
     testCase = testCase.replace(new RegExp(`\{\{ ${name} \}\}`, 'g'), value)
   }
 
-  return testCase
+  return { testCase, signature }
+
+  function shasum (testCase) {
+    const sha = crypto.createHash('sha256')
+    sha.update(testCase)
+    return sha.digest('hex')
+  }
 }
 
-async function getPath (failingTestRoot, testCase, offset = 8) {
-  var hash = shasum(testCase)
-  var name = p.join(failingTestRoot, `test-${hash.slice(0, offset)}.js`)
+async function getPath (failingTestRoot, testCase, signature, offset = 8) {
+  const signatureRegex = /\/\/ @FUZZ_SIGNATURE (.*)/g
+  var name = p.join(failingTestRoot, `test-${signature.slice(0, offset)}.js`)
 
   const { exists, continue: cont } = await checkIfExists()
   if (!exists) return name
@@ -129,11 +142,6 @@ async function getPath (failingTestRoot, testCase, offset = 8) {
   if (offset >= hash.length) return null
   return getPath(failingTestRoot, hash, offset + 8)
 
-  function shasum (testCase) {
-    const sha = crypto.createHash('sha256')
-    sha.update(testCase)
-    return sha.digest('hex')
-  }
 
   function checkIfExists () {
     return new Promise((resolve, reject) => {
@@ -141,8 +149,10 @@ async function getPath (failingTestRoot, testCase, offset = 8) {
         if (err && err.errno !== -2 && err.errno !== -20) return reject(err)
         if (err) return resolve({ exists: false, continue: false})
 
-        const fileHash = shasum(contents)
-        if (fileHash === hash) return resolve({ exists: true, continue: false})
+        const signatureMatch = signatureRegex.exec(contents)
+        if (!signatureMatch) return resolve({ exists: false, continue: false})
+        const existingSignature = signatureMatch[1]
+        if (existingSignature === signature) return resolve({ exists: true, continue: false})
 
         return resolve({ exists: true, continue: true })
       })
@@ -150,8 +160,8 @@ async function getPath (failingTestRoot, testCase, offset = 8) {
   }
 }
 
-async function writeTest (testCase, failingTestRoot) {
-  const testPath = await getPath(failingTestRoot, testCase)
+async function writeTest (testCase, signature, failingTestRoot) {
+  const testPath = await getPath(failingTestRoot, testCase, signature)
   if (!testPath) {
     console.log('Test case already exists. Not overwriting.')
     return
