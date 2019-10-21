@@ -1,5 +1,4 @@
-module.exports = async function testSetup (modulePath) {
-  const { setup, validation, operations } = require(modulePath)
+module.exports = async function testSetup ({ setup, validation, operations }) {
   const { actual, reference, state } = await setup()
   const ops = operations(reference, actual, null)
   const validators = validation(reference, actual, null)

@@ -3,7 +3,8 @@ const test = require('tape')
 const testSetup = require('reference-fuzzer/test')
 
 async function getObjects () {
-  const { actual, reference, state, executor: op, validators } = await testSetup('{{ modulePath }}')
+  const testingModule = require('{{ modulePath }}')
+  const { actual, reference, state, executor: op, validators } = await testSetup(testingModule)
 
   {{ operations }}
 

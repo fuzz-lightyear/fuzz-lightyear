@@ -81,7 +81,7 @@ exports.handler = async function (argv) {
     if (!err[consts.FuzzError]) {
       console.error('Fuzzing produced unexpected error:', err)
     } else {
-      const { testCase, signature } = await generateTestCase(err, argv)
+      const { testCase, signature } = await generateTestCase(err, failingTestRoot, argv)
       console.log('\nFailing Test:\n')
       console.log(testCase)
       console.log()
@@ -93,7 +93,7 @@ exports.handler = async function (argv) {
   }
 }
 
-async function generateTestCase (err, argv) {
+async function generateTestCase (err, failingTestRoot, argv) {
   const template = await new Promise((resolve, reject) => {
     fs.readFile(TEMPLATE_PATH, { encoding: 'utf8' }, (err, contents) => {
       if (err) return reject(err)
@@ -109,7 +109,7 @@ async function generateTestCase (err, argv) {
 
   const replacements = new Map([
     ['operations', operations],
-    ['modulePath', argv.module],
+    ['modulePath', p.relative(failingTestRoot, argv.module)],
     ['config', JSON.stringify(err[consts.Config], null, 1)],
     ['description', err[consts.Description]],
     ['testName', testName],
