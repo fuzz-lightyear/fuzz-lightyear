@@ -139,9 +139,8 @@ async function getPath (failingTestRoot, testCase, signature, offset = 8) {
   if (!exists) return name
   if (!cont) return null
 
-  if (offset >= hash.length) return null
-  return getPath(failingTestRoot, hash, offset + 8)
-
+  if (offset >= signature.length) return null
+  return getPath(failingTestRoot, testCase, signature, offset + 8)
 
   function checkIfExists () {
     return new Promise((resolve, reject) => {
