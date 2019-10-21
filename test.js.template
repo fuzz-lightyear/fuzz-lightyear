@@ -1,0 +1,32 @@
+const p = require('path')
+const test = require('tape')
+const testSetup = require('reference-fuzzer/test')
+
+async function getObjects () {
+  const { actual, reference, state, executor: op, validators } = await testSetup('{{ modulePath }}')
+
+  {{ operations }}
+
+  return { actual, reference, state, tests: validators.tests }
+}
+
+function runTests () {
+  test('{{ description }}', async t => {
+    const { tests } = await getObjects()
+
+    t.error(await tests.{{ testName }}({{ testArgs }}))
+    t.end()
+  })
+}
+
+const config = {{ config }}
+
+if (require.main) {
+  runTests()
+} else {
+  module.exports = {
+    runTests,
+    getObjects,
+    config
+  }
+}
