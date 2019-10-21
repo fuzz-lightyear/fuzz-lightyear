@@ -14,7 +14,12 @@ function runTests () {
   test('{{ description }}', async t => {
     const { tests } = await getObjects()
 
-    t.error(await tests.{{ testName }}({{ testArgs }}))
+    try {
+      await tests.{{ testName }}({{ testArgs }})
+      t.pass('fuzz test passed')
+    } catch (err) {
+      t.fail(err)
+    }
     t.end()
   })
 }

@@ -67,7 +67,7 @@ exports.handler = async function (argv) {
 
   if (!argv.debug) {
     bar = new progress.SingleBar()
-    bar.start(argv.iterations || userConfig.iterations, 0)
+    bar.start(argv.iterations || userConfig.numIterations, 0)
     events.on('progress', () => bar.increment())
   }
   try {
