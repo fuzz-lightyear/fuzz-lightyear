@@ -19,7 +19,8 @@ function runTests () {
       await tests.{{ testName }}({{ testArgs }})
       t.pass('fuzz test passed')
     } catch (err) {
-      t.fail(err)
+      if (err.longDescription) console.error(err.longDescription)
+      t.fail(err, '{{ description }}')
     }
     t.end()
   })

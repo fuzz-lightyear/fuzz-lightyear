@@ -119,6 +119,7 @@ class GenericFuzzer extends EventEmitter {
       err[consts.TestArgs] = testArgs
       err[consts.TestName] = testName
       err[consts.Description] = err.message
+      err[consts.LongDescription] = err.longDescription
       err[consts.TestFunction] = test
       err[consts.Config] = this.opts
       err[consts.FuzzError] = true
@@ -193,6 +194,7 @@ class GenericFuzzer extends EventEmitter {
         err[consts.TestArgs] = testArgs
         err[consts.TestName] = validator.test
         err[consts.Description] = err.message
+        err[consts.LongDescription] = err.longDescription
         err[consts.TestFunction] = test
         err[consts.Config] = this.opts
         err[consts.FuzzError] = true
