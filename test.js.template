@@ -26,16 +26,13 @@ function runTests () {
   })
 }
 
-const config = {{ config }}
-
-if (require.main) {
+module.exports = {
+  runTests,
+  getObjects,
+  config: {{ config }},
+}
+if (require.main && !process.env['FUZZ_DISABLE_TEST']) {
   runTests()
-} else {
-  module.exports = {
-    runTests,
-    getObjects,
-    config,
-  }
 }
 
 // Warning: Do not modify the signature below! It is used to deduplicate fuzz tests.
