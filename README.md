@@ -1,4 +1,10 @@
-# fuzz-fuzzer
-A fuzzing toolkit that makes it easy to fuzz against a reference.
+# fuzz-lightyear
+A fuzzing toolkit that makes it easy to fuzz against a model.
 
-__TODO:__ Come up with a better name.
+### Installation
+### Usage
+### API
+### License
+### Sponsors
+This project was kindly sponsored by NearForm.
+
