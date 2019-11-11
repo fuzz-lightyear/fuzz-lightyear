@@ -48,8 +48,9 @@ class GenericFuzzer extends EventEmitter {
     super()
     this.opts = opts
     this.seed = this.opts.seed
+    this.seedNumber = this.opts.seedNumber
     this.fuzzer = new FuzzBuzz({
-      seed: this.seed,
+      seed: this.seed + this.seedNumber,
       debugging: this.opts.debug,
       validate: this.validate.bind(this)
     })
@@ -205,10 +206,10 @@ class GenericFuzzer extends EventEmitter {
   }
 }
 
-
 function create (userFunctions, userConfig) {
   const opts = deepmerge(defaults, userConfig)
-  const startingSeed = opts.randomSeed ? crypto.randomBytes(16).toString('hex') : opts.seed
+  const seedPrefix = opts.randomSeed ? crypto.randomBytes(16).toString('hex') : opts.seedPrefix
+  const seedNumber = (opts.seedNumber !== undefined) ? opts.seedNumber : 0
   var events = new EventEmitter()
 
   return { events, run }
@@ -217,7 +218,8 @@ function create (userFunctions, userConfig) {
     for (let i = 0; i < opts.numIterations; i++) {
       const fuzzer = new GenericFuzzer(userFunctions, {
         ...userConfig,
-        seed: startingSeed + (i ? '' + i : '')
+        seed: seedPrefix,
+        seedNumber: seedNumber + i
       })
       await fuzzer.setup()
       events.emit('progress')

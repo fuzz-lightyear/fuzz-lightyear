@@ -1,5 +1,6 @@
 module.exports = {
-  seed: 'fuzzing-',
+  seedPrefix: 'fuzzing-',
+  seedNumber: 0,
   randomSeed: false,
   iterations: 2000,
   operations: 10,

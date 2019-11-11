@@ -26,10 +26,12 @@ function runTests () {
   })
 }
 
+const config = {{ config }}
+
 module.exports = {
   runTests,
   getObjects,
-  config: {{ config }},
+  config,
 }
 if (require.main && !process.env['FUZZ_DISABLE_TEST']) {
   runTests()
@@ -37,3 +39,4 @@ if (require.main && !process.env['FUZZ_DISABLE_TEST']) {
 
 // Warning: Do not modify the signature below! It is used to deduplicate fuzz tests.
 // @FUZZ_SIGNATURE {{ signature }}
+// @FUZZ_TIMESTAMP {{ timestamp }}

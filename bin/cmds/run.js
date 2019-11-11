@@ -36,8 +36,8 @@ exports.builder = {
   },
   seed: {
     alias: 's',
-    description: 'The fuzzing seed',
-    type: 'string'
+    description: 'The fuzzing seed number',
+    type: 'number'
   },
   debug: {
     alias: 'd',
@@ -56,7 +56,7 @@ exports.handler = async function (argv) {
 
   var userConfig = require(argv.config)
   if (argv.operations) userConfig.numOperations = argv.operations
-  if (argv.seed) userConfig.seed = argv.seed
+  if (argv.seed) userConfig.seedNumber = argv.seed
   if (argv.debug) userConfig.debug = argv.debug
   if (argv.iterations) userConfig.numIterations = argv.iterations
 
@@ -111,10 +111,11 @@ async function generateTestCase (err, failingTestRoot, argv) {
     ['operations', operations],
     ['modulePath', p.relative(failingTestRoot, argv.module)],
     ['config', JSON.stringify(err[consts.Config], null, 1)],
-    ['description', err[consts.Description]],
+    ['description', JSON.stringify(err[consts.Description])],
     ['testName', testName],
     ['testArgs', testArgs],
-    ['signature', signature]
+    ['signature', signature],
+    ['timestamp', (new Date()).toString()]
   ])
 
   var testCase = template
