@@ -14,9 +14,58 @@ We've used fuzz-lightyear internally to find bugs in a handful of tricky data st
 `npm i fuzz-lightyear -g`
 
 ### Making a Fuzzer
+Before writing a fuzzer, you should create your reference model as a class. It's assumed that your reference API mirrors the relevant portions of your actual API (those methods being fuzzed).
+
+Writing a target module that can be fuzzed with fuzz-lightyear involves writing a Node module that exports `setup` `operations`, and `validation` functions. The functions must have the following signatures:
+
+#### `async setup()`
+Perform any necessary setup to generate your reference and actual data structures. Must return an object of the form:
+```js
+{ reference, actual, state }
+```
+
+`state` is an optional, user-defined object that will be passed through all operations, which you can use to store auxilliary information during testing that isn't contained in either `reference` or `actual`. It can be `null`.
+
+#### `async operations (reference, actual, rng, opts = {})`
+Define the set of operations that you'd like to perform during fuzzing. This function must return an object with keys and values of the following form:
+```js
+{
+  (operation name): {
+    inputs: () => {
+      return [] // Returns an array of inputs that will be passed to the operation.
+    },
+    operation: async (...inputs) => {
+      // Mutate the actual/reference data structures according to the given inputs.
+      // (The data structures are in the outer operations function scope here).
+    }
+  }
+}
+```
+It's important that the input function be defined separately from the operation itself so that fuzz-lightyear can trace inputs over time. When a failing test is discovered, code generation uses these inputs.
+
+The `opts` argument will contain whatever options you define in the `operations` section of your `fuzzing.config.js`.
+
+As an example, here's what a simple kv-store `operations` function might return, if you're only testing `put` operations:
+```js
+async function operations (reference, actual, rng, opts = {}) {
+  return {
+    put: {
+      inputs: () => {
+        // Generate a random key/value pair using the random number generator.
+        return [keyFromRng(rng), valueFromRng(rng)]
+      },
+      operation: async (key, value) {
+        reference.put(key, value)
+        await actual.put(key, value)
+      }
+    }
+  }
+}
+```
+
+#### `async validation (reference, actual, rng, opts = {})`
 
 ### Working with Generated Tests
-
 
 ### Configuration
 fuzz-lightyear expects your target module to contain a `fuzzing.config.js` file, which can contain the following options:
