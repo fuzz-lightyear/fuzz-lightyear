@@ -131,8 +131,8 @@ When fuzz-lightyear finds a failure, it will attempt to generate a short test ca
 You can either run these tests directly from the CLI using the `fuzz failing` command, or you can import the test cases in a Node repl to do manual testing on the reference/actual objects. The tests export a handful of helper functions:
 ```js
 module.exports = {
-  runTests: async () { ... },   // Run the test case manually.
-  getObjects: async () { ... }, // Returns the `reference` and `actual` objects in their pre-validation states.
+  async runTests () { ... },    // Run the test case manually.
+  async getObjects () { ... },  // Returns the `reference` and `actual` objects in their pre-validation states.
   config: { ... }               // The fuzzing configuration that was used when this test was generated.
 }
 ```
