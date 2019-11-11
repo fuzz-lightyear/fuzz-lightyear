@@ -7,7 +7,7 @@ If random operations ever lead to a failure, fuzz-lightyear will first attempt t
 
 ### Examples
 We've used fuzz-lightyear internally to find bugs in a handful of tricky data structures. Check out how we used in it in:
-1. [The bitfield used in Hypercore](https://github.com/mafintosh/bitbase/tree/fuzz-based)
+1. [The upcoming bitfield for Hypercore](https://github.com/mafintosh/bitbase/tree/fuzz-based)
 2. [A distributed trie implementation](https://github.com/mafintosh/mock-trie)
 
 ### Installation
