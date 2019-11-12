@@ -66,7 +66,7 @@ exports.handler = async function (argv) {
     console.log(`Did not move ${failingTest}, as it is still failing.`)
   }
   for (const fixedTest of fixed) {
-    console.log(`Moved ${fixedTest} from ${failingTestRoot} to ${fixedTestRoot}`)
+    console.log(`Moved ${fixedTest} from failing to fixed.`)
   }
 }
 
