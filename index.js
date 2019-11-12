@@ -109,6 +109,7 @@ class GenericFuzzer extends EventEmitter {
     try {
       await this.fuzzer.run(this.opts.numOperations)
     } catch (err) {
+      console.log('Found a failure. Attempting to shorten the test case...')
       throw await this.shorten(err)
     }
   }
