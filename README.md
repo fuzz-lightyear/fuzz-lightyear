@@ -54,7 +54,7 @@ async function operations (reference, actual, rng, opts = {}) {
         // Generate a random key/value pair using the random number generator.
         return [keyFromRng(rng), valueFromRng(rng)]
       },
-      operation: async (key, value) {
+      operation: async (key, value) => {
         reference.put(key, value)
         await actual.put(key, value)
       }
