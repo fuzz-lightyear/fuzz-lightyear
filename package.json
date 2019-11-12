@@ -20,6 +20,7 @@
     "deepmerge": "^4.1.1",
     "fuzzbuzz": "^2.0.0",
     "mkdirp": "^0.5.1",
+    "simple-git": "^1.126.0",
     "tape": "^4.11.0",
     "yargs": "^14.2.0"
   }

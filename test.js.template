@@ -11,10 +11,14 @@ async function getObjects () {
   return { actual, reference, state, tests: validators.tests }
 }
 
-function runTests () {
+async function runTest () {
+  const { tests } = await getObjects()
+  return tests.{{ testName }}({{ testArgs }})
+}
+
+function runTapeTest () {
   test('{{ description }}', async t => {
     const { tests } = await getObjects()
-
     try {
       await tests.{{ testName }}({{ testArgs }})
       t.pass('fuzz test passed')
@@ -29,12 +33,13 @@ function runTests () {
 const config = {{ config }}
 
 module.exports = {
-  runTests,
+  runTest,
+  runTapeTest,
   getObjects,
   config,
 }
 if (require.main && !process.env['FUZZ_DISABLE_TEST']) {
-  runTests()
+  runTapeTest()
 }
 
 // Warning: Do not modify the signature below! It is used to deduplicate fuzz tests.
