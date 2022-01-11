@@ -14,20 +14,26 @@ We've used fuzz-lightyear internally to find bugs in a handful of tricky data st
 `npm i fuzz-lightyear -g`
 
 ### Making a Fuzzer
-Before writing a fuzzer, you should create your reference model as a class. If you're writing a kv-store, for example, your reference model might wrap a simple in-memory Map and would support `put`, `get`, and `iterator` methods.
+Writing a target module that can be fuzzed with fuzz-lightyear involves writing a Node module that exports a single function that returns an object of the form:
 
-Writing a target module that can be fuzzed with fuzz-lightyear involves writing a Node module that exports `setup` `operations`, and `validation` functions. The functions must have the following signatures:
+`rng` is a random number generator as defined by [fuzzbuzz](https://github.com/mafintosh/fuzzbuzz)
+`opts` is a copy of your `fuzzing.config.js`
 
-#### `async setup()`
-Perform any necessary setup to generate your reference and actual data structures. Must return an object of the form:
 ```js
-{ reference, actual, state }
+module.exports = async function fuzz (rng, opts) {
+  // Set up your fuzzing state here, which will be accessible as closure state in your operations/validators.
+  // The fuzzing state can be whatever you like.
+  const fuzzingState = { ... }
+  return {
+    operations,
+    validation,
+    cleanup
+  }
+}
 ```
 
-`state` is an optional, user-defined object that will be passed through all operations, which you can use to store auxilliary information during testing that isn't contained in either `reference` or `actual`. It can be `null`.
-
-#### `async operations (reference, actual, rng, opts = {})`
-Define the set of operations that you'd like to perform during fuzzing. This function must return an object with keys and values of the following form:
+#### `operations`
+Define the set of operations that you'd like to perform during fuzzing. This object must have the following form:
 ```js
 {
   (operation name): {
@@ -35,42 +41,52 @@ Define the set of operations that you'd like to perform during fuzzing. This fun
       return [] // Returns an array of inputs that will be passed to the operation.
     },
     operation: async (...inputs) => {
-      // Mutate the actual/reference data structures according to the given inputs.
-      // (The data structures are in the outer operations function scope here).
+      // Mutate your fuzzing state according to the given inputs.
+      // (The state is in the outer operations function scope here).
     }
   }
 }
 ```
 It's important that the input function be defined separately from the operation itself so that fuzz-lightyear can trace inputs over time. When a failing test is discovered, code generation uses these inputs.
 
-The `opts` argument will contain whatever options you define in the `operations` section of your `fuzzing.config.js`.
-
-As an example, here's what a simple kv-store `operations` function might return, if you're only testing `put` operations:
+As an example, here's what a simple kv-store `operations` object might return, if you're only testing `put` operations:
 ```js
-async function operations (reference, actual, rng, opts = {}) {
-  return {
+module.exports = async function fuzz (rng, opts) {
+  const state = {
+    actual: ...,
+    reference: ...
+  }
+  const operations = {
     put: {
       inputs: () => {
         // Generate a random key/value pair using the random number generator.
         return [keyFromRng(rng), valueFromRng(rng)]
       },
       operation: async (key, value) => {
-        reference.put(key, value)
-        await actual.put(key, value)
+        state.reference.put(key, value)
+        await state.actual.put(key, value)
       }
     }
+  }
+
+  // Define your validators/cleanup here
+
+  return {
+    operations,
+    validaton,
+    cleanup
   }
 }
 ```
 
-#### `async validation (reference, actual, rng, opts = {})`
-After a series of random operations (defined above) are performed on the reference/actual objects, fuzz-lightyear will run a set of validation functions against both. If there's a mismatch, the validators are expected to throw errors. 
+#### `validation`
+After a series of random operations (defined above) are performed on your fuzzing state, fuzz-lightyear will run a set of validation functions. If there's a mismatch, the validators are expected to throw errors. 
 
 The validation process is split into tests and validators: tests are intended to be simple comparisons between the two objects, while the validators are more complicated flows that call test functions one or more times.
 
 We define the tests separately in order to simplify code generation (the test functions will be imported by the generated test cases).
 
-`validation` must return an object that specifies both tests and validators as `tests` and `validators` objects:
+Your `validation` object must contain `tests` and `validators` sub-objects:
 ```js
 {
   tests: {
@@ -92,12 +108,19 @@ We define the tests separately in order to simplify code generation (the test fu
 
 Continuing the kv-store example from above, here's what a simple validator that compares lots of random keys/values might look like:
 ```js
-async function validation (reference, actual, rng, opts = {}) {
-  return {
+module.exports = async function fuzz (rng, opts) {
+  const state = {
+    actual: ...,
+    reference: ...
+  }
+
+  // Operations from above go here
+
+  const validation = {
     tests: {
       async sameValues (path) {
-        const referenceVal = reference.get(path)
-        const actualVal = await actual.get(path)
+        const referenceVal = state.reference.get(path)
+        const actualVal = await state.actual.get(path)
         if (referenceVal !== actualVal) throw new Error(`Values do not match for key: ${key}`)
       }
     },
@@ -113,17 +136,23 @@ async function validation (reference, actual, rng, opts = {}) {
       }
     }
   }
+
+  return {
+    operations,
+    validaton,
+    cleanup
+  }
+}
+
+async function validation (state, rng, opts = {}) {
+  return {
+  }
 }
 ```
 
-The `opts` argument will contain whatever options you define in the `validation` section of your `fuzzing.config.js`.
+#### `cleanup`
 
-#### Exports
-Once you've defined your setup, operations, and validation functions. Your fuzz module must export these:
-```js
-module.exports = { operations, validation, setup }
-```
-Now you have a complete fuzzer module that you can test against using the CLI commands below.
+Your fuzzing module can also export an async `cleanup` function that will be called at the end of each fuzzing iteration. This is useful if your fuzzing state contains resources that need to be closed.
 
 ### Working with Generated Tests
 When fuzz-lightyear finds a failure, it will attempt to generate a short test case for you. These tests are assigned unique hashes based on the operations that were performed and the validator that failed, then they're saved in a `test/autogenerated/failing/test-(hash).js` file.

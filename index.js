@@ -60,11 +60,10 @@ class GenericFuzzer extends EventEmitter {
 
     this._userFunctions = userFunctions
 
-    this.actual = null
-    this.reference = null
-    this.state = null
     this.operations = null
     this.validation = null
+    this.cleanup = null
+
     this.executor = null
   }
 
@@ -75,20 +74,11 @@ class GenericFuzzer extends EventEmitter {
     }
   }
 
-  async _setup () {
-    const { actual, reference, state } = await this._userFunctions.setup()
-    const operations = this._userFunctions.operations(reference, actual, this.rng, this.opts)
-    const validation = this._userFunctions.validation(reference, actual, this.rng, this.opts)
-    return { actual, reference, state, operations, validation }
-  }
-
   async setup () {
-    const { actual, reference, state, operations, validation } = await this._setup()
-    this.actual = actual
-    this.reference = reference
-    this.state = state
+    const { operations, validation, cleanup } = await this._userFunctions(this.rng, this.opts)
     this.operations = operations
     this.validation = validation
+    this.cleanup = cleanup || noop
     this.executor = new TraceExecutor([], this.operations, this.debug)
 
     for (const name of Object.keys(this.operations)) {
@@ -112,6 +102,7 @@ class GenericFuzzer extends EventEmitter {
       console.log('Found a failure. Attempting to shorten the test case...')
       throw await this.shorten(err)
     }
+    await this.cleanup()
   }
 
   async _test (testName, testFunc, testArgs) {
@@ -148,7 +139,7 @@ class GenericFuzzer extends EventEmitter {
       const nextTrace = [ ...trace ]
       nextTrace.splice(i, 1)
 
-      const { actual, reference, state, operations, validation } = await this._setup()
+      const { operations, validation, cleanup } = await this._userFunctions()
       const executor = new TraceExecutor(nextTrace, operations)
       const test = validation.tests[testName]
 
@@ -164,6 +155,8 @@ class GenericFuzzer extends EventEmitter {
           error = err
         }
       }
+
+      if (cleanup) await cleanup()
       numIterations++
     }
 
@@ -233,3 +226,5 @@ module.exports = {
   GenericFuzzer,
   create
 }
+
+function noop () {}
