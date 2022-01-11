@@ -1,10 +1,9 @@
-module.exports = async function testSetup ({ setup, validation, operations }) {
-  const { actual, reference, state } = await setup()
-  const ops = operations(reference, actual, null)
-  const validators = validation(reference, actual, null)
-  const executor = makeExecutor(ops)
-
-  return { actual, reference, state, executor, validators }
+module.exports = async function testSetup (fuzzModule) {
+  const { operations, validation } = await fuzzModule()
+  return {
+    executor: makeExecutor(operations),
+    validators: validation
+  }
 }
 
 function makeExecutor (ops) {

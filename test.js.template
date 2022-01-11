@@ -4,11 +4,11 @@ const testSetup = require('fuzz-lightyear/test')
 
 async function getObjects () {
   const testingModule = require('{{ modulePath }}')
-  const { actual, reference, state, executor: op, validators } = await testSetup(testingModule)
+  const { executor: op, validators } = await testSetup(testingModule)
 
   {{ operations }}
 
-  return { actual, reference, state, tests: validators.tests }
+  return { tests: validators.tests }
 }
 
 async function runTest () {
